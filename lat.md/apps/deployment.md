@@ -1,6 +1,6 @@
 # Images de déploiement
 
-Deux images construites depuis la racine du monorepo : le backend (`@apps/backend/Dockerfile`) et le front servi par Caddy (`@apps/front/Dockerfile`). Le compose de production les lance ; SOPS, `deploy.sh` et la CI viennent ensuite.
+Deux images construites depuis la racine du monorepo : le backend (`@apps/backend/Dockerfile`) et le front servi par Caddy (`@apps/front/Dockerfile`). Le compose de production les lance, piloté par `deploy.sh`.
 
 ```bash
 docker build -f @apps/backend/Dockerfile .
@@ -89,7 +89,7 @@ Internet → Access → tunnel → cloudflared → caddy:80
                                              └── le reste → le front dans /srv
 ```
 
-Les images de l'app sont `${REGISTRY}/backend` et `${REGISTRY}/front` au tag `${IMAGE_TAG}`, en `:?` : sans ces variables (ni `TUNNEL_TOKEN`), `docker compose config` échoue en nommant `deploy.sh` plutôt que de tirer une image par défaut. Ni secret chiffré, ni script de déploiement, ni migration dans ce fichier : ce sont les étapes suivantes.
+Les images de l'app sont `${REGISTRY}/backend` et `${REGISTRY}/front` au tag `${IMAGE_TAG}`, en `:?` : sans ces variables (ni `TUNNEL_TOKEN`), `docker compose config` échoue en nommant `deploy.sh` plutôt que de tirer une image par défaut. Ni secret ni migration dans ce fichier : les secrets arrivent par [[deployment#Déployer avec deploy.sh]], les migrations sont une étape à venir.
 
 Pour tous les services : `restart: unless-stopped` et logs `json-file` tournants (`10m` × 3, ancre `x-logging`), sinon les logs remplissent le disque de la VM. `postgres` et `cloudflared` sont épinglés par version exacte et digest d'index, comme les `FROM` : voir [[deployment#Bases épinglées par digest]].
 
@@ -116,9 +116,11 @@ Formats attendus, pour que l'étape SOPS les construise justes :
 
 ### Secrets vides et deploy.sh
 
-Compose ne crée aucun fichier pour un secret dont la valeur est vide, et le backend refuse un `*_FILE` absent : `deploy.sh` devra matérialiser les secrets optionnels vides, comme `SMTP_PASSWORD`.
+Compose ne crée aucun fichier pour un secret dont la valeur est vide, et le backend refuse un `*_FILE` absent : `deploy.sh` matérialise donc un secret vide par un simple retour à la ligne.
 
 Vérifié : avec `SMTP_PASSWORD=` dans le shell, `/run/secrets/smtp_password` n'existe pas et le backend redémarre en boucle sur `SMTP_PASSWORD_FILE : impossible de lire le fichier`.
+
+Le backend relit ce fichier d'un octet comme `""`. Vérifié au déploiement local : `/run/secrets/smtp_password` existe, et `deploy.sh` liste les secrets vides à chaque lancement.
 
 ### Côté Cloudflare
 
@@ -133,6 +135,7 @@ La configuration Cloudflare est hors du repo, faite dans le tableau de bord Zero
 Sans tunnel : construire les images en `registries/*:local`, puis un override jetable hors du repo publie Caddy sur un port local et met `cloudflared` dans un profil jamais activé.
 
 `/api/v1/status` répond sans schéma en base : aucune migration n'est nécessaire pour cette validation.
+
 
 ## Secrets de production (SOPS)
 
@@ -169,3 +172,56 @@ sops edit --input-type dotenv --output-type dotenv deploy/envs/prod.secrets.env.
 ```
 
 `TUNNEL_TOKEN` est requis avant le premier déploiement (voir [[deployment#Compose de production#Côté Cloudflare]]). `SMTP_USER` et `SMTP_PASSWORD` peuvent rester vides tant qu'aucun mail n'est envoyé.
+
+## Poste opérateur
+
+Tout part du poste de l'opérateur : la VM n'a que le moteur Docker, sans plugin compose, sans `docker login` et sans secret.
+
+Une fois par poste :
+
+```bash
+docker context create registries-prod --docker "host=ssh://<alias>"   # alias SSH de la VM
+docker --context registries-prod info                                 # doit répondre
+docker login 17p4mt20.gra7.container-registry.ovh.net                 # Harbor
+```
+
+La clé age privée de l'opérateur est dans `~/Library/Application Support/sops/age/keys.txt` (macOS), `~/.config/sops/age/keys.txt` (Linux), ou désignée par `SOPS_AGE_KEY_FILE`. Sa clé publique doit figurer dans [[deployment#Secrets de production (SOPS)#Règle de production]].
+
+Le client Docker transmet les identifiants Harbor de l'opérateur au démon distant à chaque pull. Détenir le contexte, c'est avoir l'équivalent de root sur la VM.
+
+## Déployer avec deploy.sh
+
+`deploy/deploy.sh` déchiffre les secrets en mémoire sur le poste, les injecte dans le compose et pilote le démon de la VM par le contexte Docker distant.
+
+```bash
+./deploy/deploy.sh [--context NAME] [--ps] [IMAGE_TAG] [service ...]
+./deploy/deploy.sh                       # dernier tag git v*, toute la stack
+./deploy/deploy.sh v1.2.0 backend caddy  # deux services seulement
+./deploy/deploy.sh --ps                  # état de la stack
+```
+
+Défauts : contexte `registries-prod`, `IMAGE_TAG` égal au dernier tag `v*` (`git describe`), `REGISTRY=17p4mt20.gra7.container-registry.ovh.net/registries` surchargeable par l'environnement, fichier de secrets surchargeable par `DEPLOY_SECRETS_FILE`.
+
+### Contrôles avant la VM
+
+Dans l'ordre : le contexte existe (sinon la commande pour le créer), la clé age est trouvée, puis les deux images existent au tag demandé.
+
+Les images sont vérifiées par `docker manifest inspect` depuis le poste, sans `--context` : ce sont les identifiants de l'opérateur qui comptent. Comme `manifest inspect` répond `no such manifest` aussi bien sans identifiants que pour un tag absent, le script distingue les deux par la présence de l'hôte du registre dans la config Docker locale, où `docker login` l'inscrit.
+
+`DEPLOY_TEST_INSECURE_REGISTRY=1` ajoute `--insecure`, pour un registre local en HTTP : réservé aux essais, jamais par défaut.
+
+### Secrets en mémoire
+
+`sops decrypt` alimente une boucle `read` qui `export` chaque clé dans l'environnement du script : ni fichier temporaire, ni `eval`, ni `env VAR=…` qu'un `ps` afficherait.
+
+Un secret vide devient un retour à la ligne (voir [[deployment#Compose de production#Secrets vides et deploy.sh]]) et le script en affiche la liste. Exception : un `TUNNEL_TOKEN` vide arrête le script avant tout `up`, avec la commande `sops edit` pour le renseigner une fois le tunnel créé.
+
+Ensuite : `docker --context … compose -f deploy/docker-compose.prod.yaml up -d --pull always [services]`, puis `compose ps`. `--ps` déchiffre aussi les secrets, car le compose les exige pour s'interpréter, mais saute le contrôle des images et le jeton.
+
+### Validation locale de deploy.sh
+
+Le script a été validé contre le démon local (`--context default`), avec un registre `registry:2` jetable, une clé age jetable et un jeton factice.
+
+Résultat : `postgres` et `backend` `healthy`, `/api/v1/status` répond à travers Caddy, `/run/secrets/smtp_password` existe (1 octet), et aucune valeur secrète n'apparaît dans `docker inspect` du backend. Un tag absent, un contexte inexistant, une clé absente ou un `TUNNEL_TOKEN` vide arrêtent le script avant `up`. `cloudflared` redémarre en boucle avec le jeton factice, comme attendu.
+
+Sur macOS, AirPlay (ControlCenter) écoute aussi le port 5000 en IPv6 : côté client, `localhost:5000` y aboutit. Le registre de test s'adresse donc en `127.0.0.1:5000`.
