@@ -134,3 +134,38 @@ Sans tunnel : construire les images en `registries/*:local`, puis un override je
 
 `/api/v1/status` répond sans schéma en base : aucune migration n'est nécessaire pour cette validation.
 
+## Secrets de production (SOPS)
+
+Les secrets de production sont chiffrés par SOPS + age dans `deploy/envs/prod.secrets.env.enc`, versionné. Aucune copie en clair n'existe, ni sur le poste ni sur la VM.
+
+### Règle de production
+
+Dans `.sops.yaml`, la règle de `deploy/envs/prod.secrets.env.enc` précède celle de dev : SOPS prend la première qui correspond, et `\.env(\.\w+)?\.enc$` attraperait aussi ce fichier.
+
+Elle ne chiffre que pour la clé de l'opérateur. Les clés de dev, dont celle de la CI (secret `SOPS_AGE_KEY` de `playwright.yml`), n'y figurent pas : la CI ne doit jamais pouvoir déchiffrer la production.
+
+Ajouter ou retirer un opérateur : éditer la liste `age:` de la règle, puis, avec une clé déjà autorisée, rechiffrer la clé de données et commiter le fichier (voir `tuto/2_sops.md`) :
+
+```bash
+sops updatekeys --input-type dotenv deploy/envs/prod.secrets.env.enc
+```
+
+### Générer les secrets
+
+`deploy/new-prod-secrets.sh` produit le fichier chiffré en une fois, sans fichier en clair ni valeur affichée : le clair ne passe que par un pipe vers `sops encrypt`.
+
+Il respecte les formats de [[deployment#Compose de production#Secrets du compose]] : `POSTGRES_PASSWORD`, `SESSION_KEY`, `JWT_SECRET`, `JWT_REFRESH_SECRET` et `EXPORT_SIGNING_KEY` en `openssl rand -hex 32`, `DATABASE_URI` construite avec le même mot de passe. `SMTP_USER`, `SMTP_PASSWORD` et `TUNNEL_TOKEN` sortent vides.
+
+Il refuse d'écraser un fichier existant : le volume Postgres garde le premier mot de passe qu'il a vu, et `EXPORT_SIGNING_KEY` signe les exports du registre. Régénérer l'un ou l'autre casserait la production.
+
+La règle se choisit d'après `--filename-override deploy/envs/prod.secrets.env.enc`, quel que soit le chemin de sortie. Un `SOPS_AGE_RECIPIENTS` hérité du shell est ignoré : il remplacerait la règle en silence. Pour les essais, `--out` et `--age` chiffrent un autre fichier pour une clé jetable, avec `sops --config /dev/null` pour ne pas exiger de règle.
+
+### Éditer un secret
+
+Les valeurs vides se remplissent plus tard, sans jamais écrire le clair sur disque hors de l'éditeur de `sops` :
+
+```bash
+sops edit --input-type dotenv --output-type dotenv deploy/envs/prod.secrets.env.enc
+```
+
+`TUNNEL_TOKEN` est requis avant le premier déploiement (voir [[deployment#Compose de production#Côté Cloudflare]]). `SMTP_USER` et `SMTP_PASSWORD` peuvent rester vides tant qu'aucun mail n'est envoyé.
