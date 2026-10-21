@@ -30,7 +30,6 @@
     "fastify": "5.8.5",
     "pdfkit": "^0.16.0",
     "fastify-type-provider-zod": "catalog:",
-    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -39,8 +38,8 @@
     "@swc/core": "catalog:",
     "@testcontainers/postgresql": "^12.0.1",
     "@types/jsonwebtoken": "catalog:",
-    "@types/pdfkit": "^0.17.6",
     "@types/node": "^25.9.3",
+    "@types/pdfkit": "^0.17.6",
     "@vitest/coverage-v8": "catalog:",
     "@vitest/ui": "catalog:",
     "concurrently": "~10.0.3",
@@ -52,7 +51,8 @@
     "type-fest": "catalog:",
     "vite": "catalog:",
     "vite-node": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
   "volta": {
     "extends": "../../package.json"

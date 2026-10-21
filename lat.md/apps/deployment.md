@@ -21,7 +21,15 @@ Le node est en Debian (`bookworm-slim`), jamais en Alpine : `sodium-native`, tir
 
 L'app tourne en TypeScript via vite-node, avec les `@libs` résolues depuis leur `dist/`, d'où le `turbo build --filter=@apps/backend^...` au build.
 
-L'installation est complète, sans `--prod` : vite-node et `@mikro-orm/cli` sont en `devDependencies`. `git` (dépendances git du lockfile) reste dans l'étape d'installation, et l'étape runtime repart de l'image node nue. Aucun compilateur n'est installé : `argon2` et `sodium-native` livrent des binaires précompilés glibc, et seuls `cpu-features` et le binding optionnel de `ssh2` (dépendances facultatives de testcontainers, pour les tests) échouent sans conséquence. Aucun navigateur Playwright n'est installé : le backend n'utilise pas `playwright`.
+Les libs sont construites avec l'installation complète, puis `node_modules` est supprimé et réinstallé en `--prod`, hors ligne depuis le store de l'étape. L'image passe ainsi de 1,32 Go à 682 Mo. Un simple `pnpm install --prod` ne suffit pas : il retire les liens mais laisse les paquets dans `node_modules/.pnpm`.
+
+`git` (dépendances git du lockfile) reste dans l'étape d'installation, et l'étape runtime repart de l'image node nue. Aucun compilateur n'est installé : `argon2` et `sodium-native` livrent des binaires précompilés glibc, et seuls `cpu-features` et le binding optionnel de `ssh2` (dépendances facultatives de testcontainers, pour les tests) échouent sans conséquence. Aucun navigateur Playwright n'est installé : le backend n'utilise pas `playwright`.
+
+### Dépendances de production du backend
+
+Tout ce que le conteneur exécute doit être en `dependencies`, sinon l'installation `--prod` le retire et l'image ne démarre plus.
+
+Côté `@apps/backend`, cela comprend ce que `vite.config.mts` importe (`vite`, `vite-plugin-node`, `vite-tsconfig-paths`), le moteur `vite-node`, la CLI et le driver MikroORM, `@fastify/secure-session` et `@fastify/static`, et `@ngneat/falso`, importé par `mikro-orm.config.ts` et les seeders. À l'inverse, `vitest` et `playwright` sont en `devDependencies` partout : déclarés en `dependencies`, ils tiraient `msw` et `playwright-core` dans l'image. La CLI MikroORM charge sa configuration TypeScript via jiti, sans `ts-node`.
 
 ### Utilisateur node et pas de pnpm
 

@@ -38,6 +38,9 @@ COPY --from=pruner /app/out/full/ ./
 
 RUN pnpm turbo build --filter=@apps/backend^...
 
+RUN rm -rf node_modules @apps/*/node_modules @libs/*/node_modules \
+  && pnpm install --prod --frozen-lockfile --offline
+
 FROM ${NODE_IMAGE} AS runtime
 
 ENV HOST=0.0.0.0

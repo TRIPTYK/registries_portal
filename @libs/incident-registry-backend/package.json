@@ -30,7 +30,6 @@
     "fastify": "5.8.5",
     "fastify-type-provider-zod": "catalog:",
     "pdfkit": "^0.15.0",
-    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -52,7 +51,8 @@
     "type-fest": "catalog:",
     "vite": "catalog:",
     "vite-node": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
   "volta": {
     "extends": "../../package.json"
