@@ -1,6 +1,6 @@
 # Images de déploiement
 
-Deux images construites depuis la racine du monorepo : le backend (`@apps/backend/Dockerfile`) et le front servi par Caddy (`@apps/front/Dockerfile`). Le compose, SOPS et la CI viennent ensuite.
+Deux images construites depuis la racine du monorepo : le backend (`@apps/backend/Dockerfile`) et le front servi par Caddy (`@apps/front/Dockerfile`). Le compose de production les lance ; SOPS, `deploy.sh` et la CI viennent ensuite.
 
 ```bash
 docker build -f @apps/backend/Dockerfile .
@@ -78,3 +78,59 @@ Toutes les réponses portent `X-Content-Type-Options: nosniff`, `X-Frame-Options
 Le `.dockerignore` exclut `**/.env` et `**/.env.*` à tous les niveaux : le `@apps/backend/.env` déchiffré en dev n'entre jamais dans le contexte, donc dans aucune couche.
 
 Il exclut aussi ce qu'aucune image n'utilise ou qu'elle reconstruit : `node_modules`, `dist`, `.turbo` à tous les niveaux, `.git`, `lat.md`, `specs`, `tuto`, `.claude`, `.agentsroom`. `turbo prune` ne copie ni `.npmrc` ni `patches/`, que le lockfile exige : les Dockerfiles les copient à part.
+
+## Compose de production
+
+`deploy/docker-compose.prod.yaml` (projet `registries`) lance `postgres`, `backend`, `caddy` et `cloudflared`. Aucun port n'est publié : le tunnel Cloudflare est la seule entrée.
+
+```
+Internet → Access → tunnel → cloudflared → caddy:80
+                                             ├── /api/*  → backend:8000 → postgres:5432
+                                             └── le reste → le front dans /srv
+```
+
+Les images de l'app sont `${REGISTRY}/backend` et `${REGISTRY}/front` au tag `${IMAGE_TAG}`, en `:?` : sans ces variables (ni `TUNNEL_TOKEN`), `docker compose config` échoue en nommant `deploy.sh` plutôt que de tirer une image par défaut. Ni secret chiffré, ni script de déploiement, ni migration dans ce fichier : ce sont les étapes suivantes.
+
+Pour tous les services : `restart: unless-stopped` et logs `json-file` tournants (`10m` × 3, ancre `x-logging`), sinon les logs remplissent le disque de la VM. `postgres` et `cloudflared` sont épinglés par version exacte et digest d'index, comme les `FROM` : voir [[deployment#Bases épinglées par digest]].
+
+### Services
+
+Postgres 18 sans port, le backend en `service_healthy` derrière lui, Caddy et cloudflared en `service_started`.
+
+- `postgres` : même majeure que le compose de dev. L'image 18 pose `PGDATA=/var/lib/postgresql/18/docker` et déclare le volume sur `/var/lib/postgresql` : le volume `postgres-data` y est monté, pas sur `.../data`, qui laisserait les données hors du volume. `POSTGRES_USER` et `POSTGRES_DB` valent `registries` en clair, le mot de passe arrive par `POSTGRES_PASSWORD_FILE`. Healthcheck `pg_isready`.
+- `backend` : configuration non secrète en clair (`HOST=0.0.0.0`, URLs `https://registries.triptyk.be`, drapeaux de [[backend-bootstrap#Drapeaux de fonctionnalité par domaine]], SMTP Mailgun EU en STARTTLS sur 587). Aucun code n'envoie encore de mail : le SMTP ne sert qu'à passer la validation, région et adresse d'envoi sont à confirmer. Healthcheck `fetch` sur `http://127.0.0.1:8000/api/v1/status` — pas `localhost`, qui peut se résoudre en `::1` alors que le backend n'écoute qu'en IPv4 — avec `start_period: 60s` pour vite-node, et `init: true`.
+- `caddy` : attend seulement que le backend soit démarré. Il sert le front pendant que l'API démarre, et un backend malade ne fait pas tomber tout le hostname.
+- `cloudflared` : `tunnel --no-autoupdate run`, jeton en variable d'environnement.
+
+### Secrets du compose
+
+Huit secrets Compose de source `environment:`, chacune au nom de la clé qu'elle alimente : `DATABASE_URI`, `SESSION_KEY`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `EXPORT_SIGNING_KEY`, `SMTP_USER`, `SMTP_PASSWORD`, `POSTGRES_PASSWORD`.
+
+Ils sont montés en `/run/secrets/<clé en minuscules>` et relus via `*_FILE` ([[backend-bootstrap#Configuration de production#Secrets livrés en fichier]]) : `docker inspect` du backend ne montre que les chemins. Seule exception, `TUNNEL_TOKEN` : `cloudflared tunnel run` ne lit que la variable, sans `*_FILE`, et sa valeur est visible dans `docker inspect` de `cloudflared`.
+
+Formats attendus, pour que l'étape SOPS les construise justes :
+
+- `POSTGRES_PASSWORD` : généré en hexadécimal (`openssl rand -hex 32`), donc sans `@`, `:` ni `/`, car il est recopié tel quel dans l'URI ;
+- `DATABASE_URI` : `postgresql://registries:<POSTGRES_PASSWORD>@postgres:5432/registries`, avec le même mot de passe que le secret `POSTGRES_PASSWORD` ;
+- `SESSION_KEY` : 64 caractères hexadécimaux (`openssl rand -hex 32`). Le backend la décode en hex et exige 32 octets ; toute autre valeur l'empêche de démarrer (`key must be 32 bytes`).
+
+### Secrets vides et deploy.sh
+
+Compose ne crée aucun fichier pour un secret dont la valeur est vide, et le backend refuse un `*_FILE` absent : `deploy.sh` devra matérialiser les secrets optionnels vides, comme `SMTP_PASSWORD`.
+
+Vérifié : avec `SMTP_PASSWORD=` dans le shell, `/run/secrets/smtp_password` n'existe pas et le backend redémarre en boucle sur `SMTP_PASSWORD_FILE : impossible de lire le fichier`.
+
+### Côté Cloudflare
+
+La configuration Cloudflare est hors du repo, faite dans le tableau de bord Zero Trust.
+
+- un tunnel géré à distance, dont le jeton devient `TUNNEL_TOKEN` ;
+- un hostname public `registries.triptyk.be` routé vers le service `http://caddy:80` — cloudflared résout `caddy` sur le réseau du projet ;
+- une application Access sur ce hostname, avec la politique qui fixe qui peut l'atteindre. Le TLS se termine chez Cloudflare, d'où `auto_https off` dans Caddy.
+
+### Valider le compose en local
+
+Sans tunnel : construire les images en `registries/*:local`, puis un override jetable hors du repo publie Caddy sur un port local et met `cloudflared` dans un profil jamais activé.
+
+`/api/v1/status` répond sans schéma en base : aucune migration n'est nécessaire pour cette validation.
+
