@@ -76,9 +76,9 @@ test("falsification détectée après UPDATE SQL direct du hash", async () => {
 
   // Falsification directe en SQL (contournement des triggers pour le test)
   const em = module.em;
-  await em.execute(`ALTER TABLE access_record DISABLE TRIGGER access_record_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = replica`);
   await em.execute(`UPDATE access_record SET hash = repeat('f', 64) WHERE seq = 1`);
-  await em.execute(`ALTER TABLE access_record ENABLE TRIGGER access_record_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = DEFAULT`);
 
   const response = await module.fastifyInstance.inject({
     method: "GET",
