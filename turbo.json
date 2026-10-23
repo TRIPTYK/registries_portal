@@ -6,7 +6,8 @@
         "build": {
             "dependsOn": ["^build"],
             "inputs": ["src/**"],
-            "outputs": ["dist/**"]
+            "outputs": ["dist/**"],
+            "env": ["VITE_MOCK_API", "APP_VERSION"]
         },
         "build:watch": {
             "persistent": true,

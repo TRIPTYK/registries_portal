@@ -65,9 +65,9 @@ test("falsification détectée après UPDATE SQL direct du hash", async () => {
   });
 
   const em = module.em;
-  await em.execute(`ALTER TABLE incident DISABLE TRIGGER incident_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = replica`);
   await em.execute(`UPDATE incident SET hash = repeat('f', 64) WHERE seq = 1`);
-  await em.execute(`ALTER TABLE incident ENABLE TRIGGER incident_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = DEFAULT`);
 
   const response = await module.fastifyInstance.inject({
     method: "GET",
@@ -172,9 +172,9 @@ test("rétrograder canonical_version (trigger désactivé) casse la chaîne", as
   });
 
   const em = module.em;
-  await em.execute(`ALTER TABLE incident DISABLE TRIGGER incident_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = replica`);
   await em.execute(`UPDATE incident SET canonical_version = 1 WHERE seq = 1`);
-  await em.execute(`ALTER TABLE incident ENABLE TRIGGER incident_no_mutation`);
+  await em.execute(`SET LOCAL session_replication_role = DEFAULT`);
 
   const response = await module.fastifyInstance.inject({
     method: "GET",

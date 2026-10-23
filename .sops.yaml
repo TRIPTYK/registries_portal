@@ -1,4 +1,17 @@
 creation_rules:
+  # Secrets de production, lus par deploy/deploy.sh. Placée en premier : SOPS
+  # prend la première règle qui correspond, et celle de dev attraperait aussi ce
+  # fichier. Seuls les opérateurs y figurent, jamais la clé de la CI.
+  #
+  # Ajouter (ou retirer) un opérateur : éditer la liste `age:` ci-dessous, puis
+  # rechiffrer la clé de données pour la nouvelle liste, depuis la racine, avec
+  # une clé déjà autorisée :
+  #   sops updatekeys --input-type dotenv deploy/envs/prod.secrets.env.enc
+  # et commiter le fichier chiffré. Voir tuto/2_sops.md.
+  - path_regex: (^|/)deploy/envs/prod\.secrets\.env\.enc$
+    input_type: dotenv
+    output_type: dotenv
+    age: age1kvdd4jkf8aa8dkpkurhhd387c3459hkda72nyw5ujvsrpvqgc3dqgvw2xq
   - path_regex: \.env(\.\w+)?\.enc$
     input_type: dotenv
     output_type: dotenv

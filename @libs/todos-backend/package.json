@@ -26,7 +26,6 @@
     "@mikro-orm/postgresql": "7.1.4",
     "fastify": "5.8.5",
     "fastify-type-provider-zod": "catalog:",
-    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -48,7 +47,8 @@
     "type-fest": "catalog:",
     "vite": "catalog:",
     "vite-node": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
   "volta": {
     "extends": "../../package.json"

@@ -1,6 +1,12 @@
 name: Tests
 
-on: [push, release]
+# Push de branche uniquement : sur un tag, cette suite passe par release.yaml, qui
+# l'appelle avant de construire la moindre image.
+on:
+  push:
+    branches: ['**']
+  release:
+  workflow_call:
 
 jobs:
   test:

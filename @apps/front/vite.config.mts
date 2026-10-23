@@ -61,6 +61,9 @@ export default defineConfig({
   preview: {
     proxy: apiProxy,
   },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || 'dev'),
+  },
   plugins: [
     patchEmbroiderUtil(),
     tailwindcss(),

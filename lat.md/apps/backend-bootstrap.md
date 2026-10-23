@@ -69,3 +69,30 @@ FEATURE_ACCESS_REGISTRY=true
 ```
 
 Couper `FEATURE_ACCESS_REGISTRY` n'emporte plus le journal d'audit : `GET /audit-events` vit désormais dans `audit-log-backend`, module transverse jamais soumis à un drapeau, et filtre chaque événement par le domaine qu'il concerne — voir [[backend/audit-log]].
+
+## Configuration de production
+
+Réglages propres au déploiement conteneurisé (Docker derrière Caddy et un tunnel Cloudflare), neutres en dev, test et e2e tant qu'aucune variable dédiée n'est posée.
+
+### Secrets livrés en fichier
+
+Pour chaque clé `KEY` du schéma, [[@apps/backend/src/configuration.ts#applyFileEnvSecrets]] lit le fichier désigné par `KEY_FILE` et en écrit le contenu dans `process.env.KEY`, avant le parse Zod.
+
+Docker Compose dépose les secrets sous `/run/secrets/` et n'expose que leur chemin (`DATABASE_URI_FILE=/run/secrets/database_uri`) : `docker inspect` ne montre aucune valeur. Règles :
+
+- seules les clés du schéma sont lues — un `*_FILE` générique chargerait `SOPS_AGE_KEY_FILE` ou `SSL_CERT_FILE` depuis le shell du développeur ;
+- `KEY_FILE` l'emporte sur `KEY` en clair ;
+- seuls les retours à la ligne finaux sont retirés ; un fichier vide donne `""` (secret optionnel volontairement vide, comme `SMTP_PASSWORD`) ;
+- fichier absent ou illisible : erreur immédiate qui nomme la variable `*_FILE` et le chemin, plutôt qu'un démarrage sur une configuration incomplète.
+
+Sans aucune variable `*_FILE`, rien ne change. Le mécanisme s'applique au serveur comme à la CLI MikroORM, qui passent tous deux par `loadConfiguration`.
+
+### Adresse d'écoute
+
+`HOST` (défaut `localhost`) est passé à `fastify.listen` par [[@apps/backend/src/app/app.ts#App#start]]. Le défaut garde le proxy Vite du front (`http://localhost:8000`) ; le compose de production pose `HOST=0.0.0.0` pour que Caddy joigne le backend par le réseau Docker.
+
+### Logger
+
+En production ([[@apps/backend/src/app/logger.ts#logger]] avec `PRODUCTION_ENV=true`), `pino()` sans transport écrit du JSON sur stdout, lu par le driver de logs Docker ; `pino-pretty` est réservé au dev.
+
+L'ancienne config `transport: { target: "pino" }` plantait au démarrage avec `ThreadStream: destination.write is not a function` (reproduit sur pino 10.3.1) : `pino` n'est pas une cible de transport.
