@@ -225,3 +225,35 @@ Le script a été validé contre le démon local (`--context default`), avec un 
 Résultat : `postgres` et `backend` `healthy`, `/api/v1/status` répond à travers Caddy, `/run/secrets/smtp_password` existe (1 octet), et aucune valeur secrète n'apparaît dans `docker inspect` du backend. Un tag absent, un contexte inexistant, une clé absente ou un `TUNNEL_TOKEN` vide arrêtent le script avant `up`. `cloudflared` redémarre en boucle avec le jeton factice, comme attendu.
 
 Sur macOS, AirPlay (ControlCenter) écoute aussi le port 5000 en IPv6 : côté client, `localhost:5000` y aboutit. Le registre de test s'adresse donc en `127.0.0.1:5000`.
+
+## Release par la CI
+
+`.github/workflows/release.yaml` construit et pousse les deux images sur un tag `v*`, vers `<HARBOR_REGISTRY>/registries/{backend,front}`, que `deploy.sh` tire ensuite.
+
+Trois étapes, dans l'ordre :
+
+- **garde** : le commit taggé doit être sur `develop` ou `main`. Un tag n'appartient à aucune branche ; sans ce contrôle, un tag posé sur une branche de feature livrerait du code non mergé ;
+- **tests** : `tests.yaml` (lint, tests front et backend) et `playwright.yml` (e2e), appelés en `workflow_call` sur le commit taggé. Aucune image n'est construite si l'un échoue. `tests.yaml` ne se déclenche plus sur un push de tag, pour ne pas tourner deux fois ;
+- **images** : build `linux/amd64` natif, sans QEMU, un cache GitHub par image. Le front reçoit `APP_VERSION` égal au nom du tag, affiché par le filigrane ([[deployment#Image front#Filigrane de version]]).
+
+Chaque image est publiée sous `1.2.0` et `v1.2.0` ; `deploy.sh` prend par défaut le tag git, donc `v1.2.0`. `latest` ne bouge que pour une version finale : une `rc` ne le déplace pas.
+
+### Prérequis de la release
+
+À faire une fois, avant le premier tag, hors du repo.
+
+- Harbor : un projet `registries` et un compte robot avec le droit push sur ce seul projet ;
+- GitHub, dans les secrets du dépôt : `HARBOR_REGISTRY` (l'hôte, `17p4mt20.gra7.container-registry.ovh.net`), `HARBOR_USERNAME` (le robot) et `HARBOR_PASSWORD`. `SOPS_AGE_KEY`, déjà présent pour les e2e, est transmis à `playwright.yml` par `secrets: inherit` ;
+- les runners GitHub doivent joindre Harbor.
+
+Aucun secret applicatif n'entre dans la CI : les images ne dépendent pas de l'environnement, et la clé CI ne figure pas parmi les destinataires de la règle SOPS de production ([[deployment#Secrets de production (SOPS)#Règle de production]]).
+
+### Tester la release
+
+Un workflow GitHub ne se teste pas en local : on le valide par un premier tag de pré-release, posé sur un commit de `develop`.
+
+```bash
+git tag v0.1.0-rc.1 && git push origin v0.1.0-rc.1
+```
+
+Le tag doit être sur `develop` ou `main` : la garde refuse un tag posé sur `ops/backend-prod-config` tant que la branche n'est pas mergée. Vérifier ensuite que les quatre jobs passent, que les deux images apparaissent dans Harbor aux tags `0.1.0-rc.1` et `v0.1.0-rc.1`, puis `./deploy/deploy.sh v0.1.0-rc.1`.
