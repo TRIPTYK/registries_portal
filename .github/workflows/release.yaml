@@ -31,8 +31,10 @@ jobs:
         run: |
           git fetch --no-tags origin \
             +refs/heads/develop:refs/remotes/origin/develop \
-            +refs/heads/main:refs/remotes/origin/main
-          for branch in develop main; do
+            +refs/heads/main:refs/remotes/origin/main \
+            +refs/heads/ops/backend-prod-config:refs/remotes/origin/ops/backend-prod-config
+          # TEMPORAIRE : à retirer avant le merge.
+          for branch in develop main ops/backend-prod-config; do
             if git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch"; then
               echo "✓ ${GITHUB_REF_NAME} ($GITHUB_SHA) est sur $branch"
               exit 0
