@@ -81,7 +81,7 @@ Il exclut aussi ce qu'aucune image n'utilise ou qu'elle reconstruit : `node_modu
 
 ## Compose de production
 
-`deploy/docker-compose.prod.yaml` (projet `registries`) lance `postgres`, `backend`, `caddy` et `cloudflared`. Aucun port n'est publié : le tunnel Cloudflare est la seule entrée.
+`deploy/docker-compose.prod.yaml` (projet `registries`) lance `postgres`, `migrate`, `backend`, `caddy` et `cloudflared`. Aucun port n'est publié : le tunnel Cloudflare est la seule entrée.
 
 ```
 Internet → Access → tunnel → cloudflared → caddy:80
@@ -89,15 +89,16 @@ Internet → Access → tunnel → cloudflared → caddy:80
                                              └── le reste → le front dans /srv
 ```
 
-Les images de l'app sont `${REGISTRY}/backend` et `${REGISTRY}/front` au tag `${IMAGE_TAG}`, en `:?` : sans ces variables (ni `TUNNEL_TOKEN`), `docker compose config` échoue en nommant `deploy.sh` plutôt que de tirer une image par défaut. Ni secret ni migration dans ce fichier : les secrets arrivent par [[deployment#Déployer avec deploy.sh]], les migrations sont une étape à venir.
+Les images de l'app sont `${REGISTRY}/backend` et `${REGISTRY}/front` au tag `${IMAGE_TAG}`, en `:?` : sans ces variables (ni `TUNNEL_TOKEN`), `docker compose config` échoue en nommant `deploy.sh` plutôt que de tirer une image par défaut. Aucun secret dans ce fichier : ils arrivent par [[deployment#Déployer avec deploy.sh]]. Le schéma de la base est l'affaire du service `migrate` ([[deployment#Migrations au déploiement]]).
 
 Pour tous les services : `restart: unless-stopped` et logs `json-file` tournants (`10m` × 3, ancre `x-logging`), sinon les logs remplissent le disque de la VM. `postgres` et `cloudflared` sont épinglés par version exacte et digest d'index, comme les `FROM` : voir [[deployment#Bases épinglées par digest]].
 
 ### Services
 
-Postgres 18 sans port, le backend en `service_healthy` derrière lui, Caddy et cloudflared en `service_started`.
+Postgres 18 sans port, `migrate` derrière lui en `service_healthy`, le backend derrière `migrate` en `service_completed_successfully`, Caddy et cloudflared en `service_started`.
 
 - `postgres` : même majeure que le compose de dev. L'image 18 pose `PGDATA=/var/lib/postgresql/18/docker` et déclare le volume sur `/var/lib/postgresql` : le volume `postgres-data` y est monté, pas sur `.../data`, qui laisserait les données hors du volume. `POSTGRES_USER` et `POSTGRES_DB` valent `registries` en clair, le mot de passe arrive par `POSTGRES_PASSWORD_FILE`. Healthcheck `pg_isready`.
+- `migrate` : l'image backend avec la commande `src/cli/migrate.ts`, `restart: "no"`. Il reprend l'environnement et les secrets du backend par ancres YAML (`&backend-environment`, `&backend-secrets`), car `mikro-orm.config.ts` valide toute la configuration.
 - `backend` : configuration non secrète en clair (`HOST=0.0.0.0`, URLs `https://registries.triptyk.be`, drapeaux de [[backend-bootstrap#Drapeaux de fonctionnalité par domaine]], SMTP Mailgun EU en STARTTLS sur 587). Aucun code n'envoie encore de mail : le SMTP ne sert qu'à passer la validation, région et adresse d'envoi sont à confirmer. Healthcheck `fetch` sur `http://127.0.0.1:8000/api/v1/status` — pas `localhost`, qui peut se résoudre en `::1` alors que le backend n'écoute qu'en IPv4 — avec `start_period: 60s` pour vite-node, et `init: true`.
 - `caddy` : attend seulement que le backend soit démarré. Il sert le front pendant que l'API démarre, et un backend malade ne fait pas tomber tout le hostname.
 - `cloudflared` : `tunnel --no-autoupdate run`, jeton en variable d'environnement.
@@ -136,6 +137,64 @@ Sans tunnel : construire les images en `registries/*:local`, puis un override je
 
 `/api/v1/status` répond sans schéma en base : aucune migration n'est nécessaire pour cette validation.
 
+
+## Migrations au déploiement
+
+Le service `migrate` met la base au niveau de l'image avant chaque démarrage du backend. S'il échoue, le backend ne démarre pas et `compose up` s'arrête en erreur.
+
+[[@apps/backend/src/app/database.migrate.ts#migrateDatabase]] enchaîne trois étapes, dans l'ordre :
+
+- les migrations MikroORM en attente (`src/migrations`) ;
+- `APPEND_ONLY_DDL`, les triggers d'immuabilité des registres ([[hash-chain-integrity]]). Ils sont réappliqués à chaque passage plutôt que figés dans une migration, pour rester une seule définition, partagée avec `schema:fresh` ;
+- les données de référence : les 4 rôles et leurs règles ([[@apps/backend/src/seeders/seed-data/roles.ts#seedRolesAndPermissions]], partagé avec le seeder de dev) et les référentiels du registre d'accès.
+
+Aucun utilisateur, aucune donnée de démonstration : en prod, le seeder de dev n'est jamais lancé.
+
+### Une base vide arrive au niveau du code
+
+Sur une base vide, `migrateDatabase` applique toutes les migrations, pose les triggers et crée les 4 rôles. La base obtenue correspond aux entités.
+
+Le test vérifie aussi `migrator.checkSchema()` : une entité modifiée sans sa migration le fait échouer. Il tient lieu de `migration:check` en CI, sans étape à part, puisque `tests.yaml` lance déjà les tests backend sur testcontainer.
+
+### Rejouable à chaque déploiement
+
+Un second passage n'applique aucune migration et ne duplique ni rôle ni règle. C'est ce qui permet de lancer `migrate` à chaque `deploy.sh`, sans état à suivre.
+
+Un rôle qui porte déjà des règles n'en reçoit pas d'autres : les permissions modifiées depuis l'interface sont conservées. Changer les règles d'un rôle existant en prod demande donc une migration.
+
+### Liste explicite des migrations
+
+La découverte des migrations par glob échoue sous vite-node (`MigrationClass is not a constructor`), comme celle des seeders. `src/migrations/index.ts` les liste donc une à une, dans `migrationsList`.
+
+Un test compare cette liste aux fichiers `Migration*.ts` du dossier : une migration créée mais non listée le fait échouer.
+
+### Ajouter une migration
+
+Après un changement d'entité : `pnpm mikro-orm migration:create`, puis ajouter la classe générée à `migrationsList`.
+
+Le diff se fait contre `src/migrations/.snapshot.json`, versionné avec les migrations. Son nom est fixé (`snapshotName`) : par défaut il porte le nom de la base, qui n'est pas le même en dev et en prod.
+
+Sans snapshot, MikroORM compare les entités à la base locale. En v7, ce diff connaît les triggers append-only, absents des entités, et générerait leur suppression. Pour la même raison, `schema:update` ne doit jamais toucher une base qui porte des registres.
+
+Les migrations générées dépassent `max-lines-per-function` : `.oxlintrc.json` du backend lève cette règle pour `src/migrations/*.ts`.
+
+### Créer un utilisateur
+
+Une base neuve n'a aucun compte, et seul un `tech_admin` peut en créer depuis l'interface. [[@apps/backend/src/app/user.create.ts#createUserAccount]] crée le premier, en ligne de commande.
+
+Elle applique le même seuil de 12 caractères que l'API, et refuse un rôle inconnu ou une adresse déjà prise. Depuis le poste de l'opérateur :
+
+```bash
+read -rs NEW_USER_PASSWORD && export NEW_USER_PASSWORD
+docker --context registries-prod exec -e NEW_USER_PASSWORD registries-backend-1 \
+  ./node_modules/.bin/vite-node src/cli/create-user.ts \
+  --email prenom.nom@triptyk.eu --first-name Prénom --last-name Nom --role tech_admin
+unset NEW_USER_PASSWORD
+```
+
+`-e NEW_USER_PASSWORD`, sans valeur, reprend la variable du shell local : le mot de passe n'apparaît sur aucune ligne de commande.
+
+Il ne passe pas non plus par stdin. Vite prend la fin de stdin pour la mort du processus parent, sauf si `CI=true` : vite-node s'arrête alors en silence avec le code 0, au milieu de la première requête, sans rien créer.
 
 ## Secrets de production (SOPS)
 

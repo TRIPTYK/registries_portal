@@ -28,7 +28,7 @@ services:
 
   backend:
     image: ${REGISTRY:?REGISTRY manquant (fourni par deploy.sh)}/backend:${IMAGE_TAG:?IMAGE_TAG manquant (fourni par deploy.sh)}
-    environment:
+    environment: &backend-environment
       PORT: "8000"
       HOST: 0.0.0.0
       PRODUCTION_ENV: "true"
@@ -49,7 +49,7 @@ services:
       EXPORT_SIGNING_KEY_FILE: /run/secrets/export_signing_key
       SMTP_USER_FILE: /run/secrets/smtp_user
       SMTP_PASSWORD_FILE: /run/secrets/smtp_password
-    secrets:
+    secrets: &backend-secrets
       - database_uri
       - session_key
       - jwt_secret
@@ -58,8 +58,8 @@ services:
       - smtp_user
       - smtp_password
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -72,6 +72,22 @@ services:
       start_period: 60s
     init: true
     restart: unless-stopped
+    logging: *default-logging
+
+  # Met la base au niveau de l'image avant le backend, à chaque déploiement :
+  # migrations, triggers append-only, rôles et référentiels. Idempotent. S'il
+  # échoue, le backend ne démarre pas et `up` s'arrête en erreur.
+  migrate:
+    image: ${REGISTRY:?REGISTRY manquant (fourni par deploy.sh)}/backend:${IMAGE_TAG:?IMAGE_TAG manquant (fourni par deploy.sh)}
+    command: ["./node_modules/.bin/vite-node", "src/cli/migrate.ts"]
+    # Même configuration que le backend : mikro-orm.config.ts la valide en entier.
+    environment: *backend-environment
+    secrets: *backend-secrets
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    restart: "no"
     logging: *default-logging
 
   caddy:

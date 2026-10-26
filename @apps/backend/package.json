@@ -49,6 +49,7 @@
     "@libs/users-backend": "workspace:*",
     "@mikro-orm/cli": "catalog:",
     "@mikro-orm/core": "7.1.4",
+    "@mikro-orm/migrations": "catalog:",
     "@mikro-orm/postgresql": "7.1.4",
     "@mikro-orm/seeder": "catalog:",
     "@ngneat/falso": "catalog:",

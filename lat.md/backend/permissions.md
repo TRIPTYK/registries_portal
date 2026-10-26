@@ -102,7 +102,7 @@ Le tableau de la liste des utilisateurs (composant `UsersTable`, `@libs/users-fr
 
 ## Seed des 4 rôles avec permissions équivalentes au comportement actuel
 
-[[@apps/backend/src/seeders/development.seeder.ts#DatabaseSeeder]] crée les 4 rôles existants (`encoder`, `dpo`, `auditor`, `tech_admin`) et leurs `PermissionRule` avant les utilisateurs, pour zéro régression au démarrage.
+[[@apps/backend/src/seeders/seed-data/roles.ts#seedRolesAndPermissions]] crée les 4 rôles existants (`encoder`, `dpo`, `auditor`, `tech_admin`) et leurs `PermissionRule`. Le seeder de dev l'appelle avant les utilisateurs, la migration de prod à chaque déploiement ([[deployment#Migrations au déploiement]]).
 
 `auditor` porte `read AccessRecord` en plus de `read AccessRecordIntegrity`/`read IncidentIntegrity` — gap découvert lors du retrofit CASL d'access-registry-backend/incident-registry-backend (`specs/done/02-permissions-registries-retrofit.md`) : le comportement pré-CASL laissait `auditor` consulter librement le registre d'accès (list/get non restreints), un seed sans cette règle l'aurait bloqué à tort une fois `requirePermission("read", "AccessRecord")` posé sur `get.route.ts`. Les tests d'intégration des deux registres seedent la même liste de règles (`tests/utils/permission-rule-seed.ts` dans chaque lib) pour rester fidèles à ce comportement.
 

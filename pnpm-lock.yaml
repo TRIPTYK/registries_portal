@@ -96,6 +96,9 @@ catalogs:
     '@mikro-orm/cli':
       specifier: 7.1.4
       version: 7.1.4
+    '@mikro-orm/migrations':
+      specifier: 7.1.4
+      version: 7.1.4
     '@mikro-orm/seeder':
       specifier: 7.1.4
       version: 7.1.4
@@ -471,6 +474,9 @@ importers:
       '@mikro-orm/core':
         specifier: 7.1.4
         version: 7.1.4
+      '@mikro-orm/migrations':
+        specifier: 'catalog:'
+        version: 7.1.4(@mikro-orm/core@7.1.4)
       '@mikro-orm/postgresql':
         specifier: 7.1.4
         version: 7.1.4(@mikro-orm/core@7.1.4)
@@ -4476,6 +4482,12 @@ packages:
     peerDependenciesMeta:
       dataloader:
         optional: true
+
+  '@mikro-orm/migrations@7.1.4':
+    resolution: {integrity: sha512-M9rsHpuuaWavoXb0yitgwb+Dy2wzIEzFh5cdJ1NHjPVwyWrTiTTcKmZUiytvHInzLvusuTomRKNRiNUENqnFvQ==}
+    engines: {node: '>= 22.17.0'}
+    peerDependencies:
+      '@mikro-orm/core': 7.1.4
 
   '@mikro-orm/postgresql@7.1.4':
     resolution: {integrity: sha512-oAGi4qb5mbct8ZG6YL9saaIkMTblt82RmBR5pY4qAtWAwQc0OAtvOMYGFzdSImG+7CRHUi618FPtz5k9CIF/VQ==}
@@ -14469,6 +14481,11 @@ snapshots:
       - dataloader
 
   '@mikro-orm/core@7.1.4': {}
+
+  '@mikro-orm/migrations@7.1.4(@mikro-orm/core@7.1.4)':
+    dependencies:
+      '@mikro-orm/core': 7.1.4
+      '@mikro-orm/sql': 7.1.4(@mikro-orm/core@7.1.4)
 
   '@mikro-orm/postgresql@7.1.4(@mikro-orm/core@7.1.4)':
     dependencies:

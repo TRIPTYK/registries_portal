@@ -90,7 +90,7 @@ Couvert à deux niveaux : en unitaire sur une chaîne construite à la main (v1 
 
 ### Application de la colonne à une base existante
 
-`schema:fresh` recrée tout et ne demande rien. Sur une base contenant déjà des incidents, appliquer la colonne à la main, jamais via `schema:update` (qui supprime les triggers d'immuabilité) :
+`schema:fresh` recrée tout. Sur une base contenant déjà des incidents, jamais `schema:update`, qui supprime les triggers d'immuabilité : en prod, une migration ([[deployment#Migrations au déploiement#Ajouter une migration]]), ailleurs, à la main :
 
 ```sql
 ALTER TABLE incident ADD COLUMN canonical_version int NOT NULL DEFAULT 1;
