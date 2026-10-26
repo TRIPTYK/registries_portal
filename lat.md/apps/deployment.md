@@ -297,6 +297,12 @@ Trois étapes, dans l'ordre :
 
 Chaque image est publiée sous `1.2.0` et `v1.2.0` ; `deploy.sh` prend par défaut le tag git, donc `v1.2.0`. `latest` ne bouge que pour une version finale : une `rc` ne le déplace pas.
 
+### Cache de Playwright
+
+Les tests et l'e2e installent Playwright par l'action locale `.github/actions/playwright-install`, qui met en cache les navigateurs et les paquets `.deb` qu'apt télécharge.
+
+Le miroir apt d'Azure est parfois tombé à quelques Ko/s : les deux premières releases ont dépassé le timeout de 10 minutes dans `playwright install --with-deps`. Un cache n'est lu que depuis la même ref ou la branche par défaut : un tag profite de celui de `develop`, pas de celui d'une branche de feature.
+
 ### Prérequis de la release
 
 À faire une fois, avant le premier tag, hors du repo.

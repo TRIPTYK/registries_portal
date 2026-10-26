@@ -47,8 +47,9 @@ jobs:
       working-directory: ./@apps/backend
       run: pnpm e2e:setup
     - name: Install Playwright Browsers
-      working-directory: ./@apps/e2e
-      run: pnpm exec playwright install --with-deps
+      uses: ./.github/actions/playwright-install
+      with:
+        working-directory: ./@apps/e2e
     - name: Run Playwright tests
       working-directory: ./@apps/e2e
       run: pnpm test
