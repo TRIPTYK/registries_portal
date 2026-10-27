@@ -10,7 +10,6 @@ import { t } from 'ember-intl';
 import type { IntlService } from 'ember-intl';
 import AuthLayout from '../auth-layout.gts';
 import { LinkTo } from '@ember/routing';
-import { hash } from '@ember/helper';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import {
@@ -59,10 +58,6 @@ export default class LoginForm extends Component {
       <h1>{{t "users.forms.login.title"}}</h1>
       <TpkLoginForm
         @onSubmit={{this.onSubmit}}
-        @initialValues={{hash
-          email="deflorenne.amaury@triptyk.eu"
-          password="123456789"
-        }}
         @loginSchema={{this.loginValidationSchema}}
         class="tpk-login-form"
       />

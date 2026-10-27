@@ -1,3 +1,5 @@
+declare const __APP_VERSION__: string;
+
 export interface Config {
   modulePrefix: string;
   podModulePrefix?: string;
@@ -26,6 +28,7 @@ function environmentConfig(environment: string): Config {
     APP: {
       // Here you can pass flags/options to your application instance
       // when it is created
+      ...(environment === 'test' ? {} : { version: __APP_VERSION__ }),
     },
   } as Config;
 

@@ -42,10 +42,8 @@
     "passport-local": "catalog:",
     "pino": "catalog:",
     "pino-pretty": "catalog:",
-    "playwright": "^1.60.0",
     "true-myth": "catalog:",
     "ts-dotenv": "catalog:",
-    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -76,6 +74,7 @@
     "passport-http-bearer": "catalog:",
     "passport-jwt": "catalog:",
     "pdf-parse": "catalog:",
+    "playwright": "^1.60.0",
     "ts-node": "catalog:",
     "tsconfig-paths": "catalog:",
     "tsdown": "catalog:",
@@ -83,7 +82,8 @@
     "vite": "catalog:",
     "vite-node": "catalog:",
     "vite-plugin-node": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
   },
   "volta": {
     "extends": "../../package.json"

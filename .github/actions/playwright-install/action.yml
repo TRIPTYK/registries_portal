@@ -1,0 +1,45 @@
+name: Installer Playwright avec cache
+description: >
+  Installe les navigateurs Playwright et leurs dépendances système, avec un cache
+  des navigateurs et des paquets apt. Le miroir apt d'Azure tombe parfois à
+  quelques Ko/s : sans les .deb en cache, cette étape dépassait le timeout du job.
+
+inputs:
+  working-directory:
+    description: Dossier du paquet qui dépend de Playwright.
+    required: true
+  browsers:
+    description: Navigateurs à installer (vide = tous).
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    # La clé suit le lockfile, donc la version de Playwright. Un cache n'est lu
+    # que depuis la même ref ou la branche par défaut : un tag profite de celui
+    # de develop, pas de celui d'une branche de feature.
+    - name: Cache des navigateurs Playwright
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-browsers-${{ runner.os }}-${{ inputs.browsers }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+    - name: Cache des paquets apt de Playwright
+      uses: actions/cache@v4
+      with:
+        path: ~/apt-archives
+        key: playwright-apt-${{ runner.os }}-${{ inputs.browsers }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: playwright-apt-${{ runner.os }}-${{ inputs.browsers }}-
+
+    - name: Installer Playwright
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # apt garde ses .deb : ceux du cache y sont replacés avant l'installation,
+        # puis les nouveaux sont recopiés pour la sauvegarde en fin de job.
+        echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-debs > /dev/null
+        mkdir -p ~/apt-archives
+        sudo cp ~/apt-archives/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+        pnpm exec playwright install --with-deps ${{ inputs.browsers }}
+        cp /var/cache/apt/archives/*.deb ~/apt-archives/ 2>/dev/null || true

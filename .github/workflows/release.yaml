@@ -1,0 +1,117 @@
+name: Release
+
+# Sur tag uniquement : une image de production naît d'une release, et seul un tag
+# part en production. Les images vont dans le Harbor maison :
+#   <HARBOR_REGISTRY>/registries/{backend,front}:<tag>
+# que deploy/deploy.sh tire. Aucun secret applicatif ici : les images ne dépendent
+# pas de l'environnement, la clé SOPS de prod n'atteint donc jamais la CI. Seul un
+# robot Harbor avec le droit push sur le projet `registries` est nécessaire.
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Un tag n'appartient à aucune branche. On refuse, bruyamment, un tag dont le
+  # commit n'est ni sur develop ni sur main, plutôt que livrer du code non mergé.
+  guard:
+    name: Le tag doit être sur develop ou main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Vérifier que le commit taggé est sur develop ou main
+        run: |
+          git fetch --no-tags origin \
+            +refs/heads/develop:refs/remotes/origin/develop \
+            +refs/heads/main:refs/remotes/origin/main \
+            +refs/heads/ops/backend-prod-config:refs/remotes/origin/ops/backend-prod-config
+          # TEMPORAIRE : à retirer avant le merge.
+          for branch in develop main ops/backend-prod-config; do
+            if git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch"; then
+              echo "✓ ${GITHUB_REF_NAME} ($GITHUB_SHA) est sur $branch"
+              exit 0
+            fi
+          done
+          echo "✗ ${GITHUB_REF_NAME} n'est ni sur develop ni sur main : ne tagger que depuis ces branches." >&2
+          exit 1
+
+  # Les mêmes suites que sur un push de branche, lancées sur le commit taggé lui-même.
+  # Aucune image n'est construite si l'une échoue.
+  tests:
+    needs: guard
+    uses: ./.github/workflows/tests.yaml
+
+  e2e:
+    needs: guard
+    uses: ./.github/workflows/playwright.yml
+    secrets: inherit
+
+  images:
+    name: Build et push ${{ matrix.name }}
+    needs: [tests, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            dockerfile: '@apps/backend/Dockerfile'
+            build-args: ''
+          # APP_VERSION est inscrit dans le filigrane du front ; le backend n'en a pas l'usage.
+          - name: front
+            dockerfile: '@apps/front/Dockerfile'
+            build-args: APP_VERSION=${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # amd64 natif sur un runner amd64, sans QEMU : la VM est en amd64.
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.HARBOR_REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.HARBOR_REGISTRY }}/registries/${{ matrix.name }}
+          # latest=auto ne déplace pas `latest` pour une pré-release (v1.0.0-rc.1) :
+          # une rc ne peut pas changer ce que vise la production.
+          flavor: latest=auto
+          # `1.0.0` et `v1.0.0` ; deploy.sh prend par défaut le tag git, `v1.0.0`.
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=tag
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          build-args: ${{ matrix.build-args }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Un cache par image, sinon les deux builds s'évincent l'un l'autre.
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      - name: Résumer les tags publiés
+        run: |
+          {
+            echo "### ${{ matrix.name }} — publié"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -22,6 +22,12 @@ En plus du chaînage applicatif, des triggers Postgres bloquent physiquement les
 
 Décision explicite : la garantie d'immuabilité ne repose pas uniquement sur la discipline applicative (`AppendService`) — un accès direct psql ou un bug de migration ne peut pas casser la chaîne, car la DB elle-même refuse la mutation. Testé côté access-registry (`@libs/access-registry-backend/tests/integration/verify-integrity.route.test.ts`) : `UPDATE`/`DELETE` directs déclenchent bien l'exception du trigger.
 
+### Contourner les triggers dans un test
+
+Les tests de falsification contournent les triggers par `SET LOCAL session_replication_role = replica`, jamais par `ALTER TABLE … DISABLE TRIGGER`.
+
+Les fichiers d'intégration tournent en parallèle sur une même base. `ALTER TABLE` prend un verrou de table, et croisé avec l'insertion d'un autre fichier sur la même clé `seq`, il provoquait des deadlocks intermittents en CI. `SET LOCAL` ne vaut que pour la transaction du test, annulée à la fin, et ne verrouille rien. Il exige un superutilisateur, ce qu'est l'utilisateur du conteneur de test.
+
 ## Jeu de champs canoniques versionné
 
 Décision (ADR, CNIL 0) : la liste des champs entrant dans le hash est **versionnée**, et chaque ligne porte la version sous laquelle elle a été écrite. Le schéma peut donc grandir sans invalider les hashs déjà écrits.
@@ -84,7 +90,7 @@ Couvert à deux niveaux : en unitaire sur une chaîne construite à la main (v1 
 
 ### Application de la colonne à une base existante
 
-`schema:fresh` recrée tout et ne demande rien. Sur une base contenant déjà des incidents, appliquer la colonne à la main, jamais via `schema:update` (qui supprime les triggers d'immuabilité) :
+`schema:fresh` recrée tout. Sur une base contenant déjà des incidents, jamais `schema:update`, qui supprime les triggers d'immuabilité : en prod, une migration ([[deployment#Migrations au déploiement#Ajouter une migration]]), ailleurs, à la main :
 
 ```sql
 ALTER TABLE incident ADD COLUMN canonical_version int NOT NULL DEFAULT 1;

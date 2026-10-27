@@ -17,7 +17,7 @@ interface RuleSeed {
 /**
  * E2E test seeder - creates users needed for Playwright e2e tests
  *
- * Miroir intentionnel de development.seeder.ts#seedRolesAndPermissions pour
+ * Miroir intentionnel de seed-data/roles.ts#seedRolesAndPermissions pour
  * les règles CASL des rôles dpo/auditor/tech_admin : garde les tests e2e
  * fidèles au comportement de permissions réellement seedé en prod, sans
  * risquer de régression sur le seeder dev en le mutualisant.

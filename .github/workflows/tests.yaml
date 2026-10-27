@@ -1,6 +1,12 @@
 name: Tests
 
-on: [push, release]
+# Push de branche uniquement : sur un tag, cette suite passe par release.yaml, qui
+# l'appelle avant de construire la moindre image.
+on:
+  push:
+    branches: ['**']
+  release:
+  workflow_call:
 
 jobs:
   test:
@@ -12,8 +18,10 @@ jobs:
       - name: Build
         run: pnpm turbo build --filter='@libs/*'
       - name: Install Playwright Browsers
-        working-directory: ./@apps/e2e
-        run: pnpm exec playwright install --with-deps chromium
+        uses: ./.github/actions/playwright-install
+        with:
+          working-directory: ./@apps/e2e
+          browsers: chromium
       - name: Lint
         run: pnpm turbo lint
       - name: Run frontend tests

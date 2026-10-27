@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { object, string } from "zod";
 import type z from "zod";
 
@@ -17,6 +18,9 @@ function featureFlag() {
 
 const schema = object({
   PORT: string().transform(Number),
+  // `localhost` par défaut : le proxy Vite du front cible `http://localhost:8000`.
+  // En conteneur, `0.0.0.0` pour être joignable depuis le réseau Docker.
+  HOST: string().default("localhost"),
   SERVER_URL: string(),
   PRODUCTION_ENV: string().transform((v) => v === "true"),
   DEBUG: string()
@@ -109,7 +113,38 @@ export function assertE2ECommandTargetsE2EDatabase(uri: string, argv: readonly s
   );
 }
 
+/**
+ * Charge dans `process.env.KEY` le contenu du fichier désigné par `KEY_FILE`,
+ * pour chaque clé du schéma (secrets Docker sous `/run/secrets/`).
+ *
+ * Limité aux clés du schéma : un `*_FILE` générique chargerait aussi
+ * `SOPS_AGE_KEY_FILE` (clé privée age) depuis le shell du développeur.
+ *
+ * @lat: [[apps/backend-bootstrap#Configuration de production#Secrets livrés en fichier]]
+ */
+export function applyFileEnvSecrets() {
+  for (const key of Object.keys(schema.shape)) {
+    const fileVariable = `${key}_FILE`;
+    const path = process.env[fileVariable];
+    if (path === undefined) {
+      continue;
+    }
+
+    let content: string;
+    try {
+      content = readFileSync(path, "utf8");
+    } catch (error) {
+      throw new Error(`${fileVariable} : impossible de lire le fichier « ${path} »`, {
+        cause: error,
+      });
+    }
+
+    process.env[key] = content.replace(/[\r\n]+$/, "");
+  }
+}
+
 export function loadConfiguration() {
+  applyFileEnvSecrets();
   const result = schema.safeParse(process.env);
 
   if (!result.success) {

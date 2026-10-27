@@ -1,3 +1,9 @@
 {
-    "extends": ["node_modules/@libs/repo-utils/configs/oxlintrc.json"]
+    "extends": ["node_modules/@libs/repo-utils/configs/oxlintrc.json"],
+    "overrides": [
+        {
+            "files": ["src/migrations/*.ts"],
+            "rules": { "max-lines-per-function": "off" }
+        }
+    ]
 }

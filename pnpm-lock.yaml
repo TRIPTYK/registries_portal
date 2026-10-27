@@ -96,6 +96,9 @@ catalogs:
     '@mikro-orm/cli':
       specifier: 7.1.4
       version: 7.1.4
+    '@mikro-orm/migrations':
+      specifier: 7.1.4
+      version: 7.1.4
     '@mikro-orm/seeder':
       specifier: 7.1.4
       version: 7.1.4
@@ -429,9 +432,15 @@ importers:
       '@fastify/passport':
         specifier: 'catalog:'
         version: 3.0.2
+      '@fastify/secure-session':
+        specifier: 'catalog:'
+        version: 8.3.0(bare-events@2.9.1)(bare-url@2.4.5)
       '@fastify/session':
         specifier: 'catalog:'
         version: 11.1.1
+      '@fastify/static':
+        specifier: 'catalog:'
+        version: 9.1.3
       '@fastify/swagger':
         specifier: 'catalog:'
         version: 9.7.0(supports-color@10.2.2)
@@ -459,12 +468,24 @@ importers:
       '@libs/users-backend':
         specifier: workspace:*
         version: link:../../@libs/users-backend
+      '@mikro-orm/cli':
+        specifier: 'catalog:'
+        version: 7.1.4
       '@mikro-orm/core':
         specifier: 7.1.4
         version: 7.1.4
+      '@mikro-orm/migrations':
+        specifier: 'catalog:'
+        version: 7.1.4(@mikro-orm/core@7.1.4)
+      '@mikro-orm/postgresql':
+        specifier: 7.1.4
+        version: 7.1.4(@mikro-orm/core@7.1.4)
       '@mikro-orm/seeder':
         specifier: 'catalog:'
         version: 7.1.4(@mikro-orm/core@7.1.4)
+      '@ngneat/falso':
+        specifier: 'catalog:'
+        version: 8.0.2
       '@types/nodemailer':
         specifier: 'catalog:'
         version: 8.0.1
@@ -501,18 +522,24 @@ importers:
       pino-pretty:
         specifier: 'catalog:'
         version: 13.1.3
-      playwright:
-        specifier: ^1.60.0
-        version: 1.61.1
       true-myth:
         specifier: 'catalog:'
         version: 9.4.0
       ts-dotenv:
         specifier: 'catalog:'
         version: 0.9.1
-      vitest:
+      vite:
         specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.4)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.4)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+        version: 8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
+      vite-node:
+        specifier: ~6.0.0
+        version: 6.0.0(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
+      vite-plugin-node:
+        specifier: 'catalog:'
+        version: 8.0.0(@swc/core@1.15.43(@swc/helpers@0.5.23))(supports-color@10.2.2)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vite-tsconfig-paths:
+        specifier: 'catalog:'
+        version: 6.1.1(supports-color@10.2.2)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -520,27 +547,12 @@ importers:
       '@fastify/flash':
         specifier: 'catalog:'
         version: 6.0.3
-      '@fastify/secure-session':
-        specifier: 'catalog:'
-        version: 8.3.0(bare-events@2.9.1)(bare-url@2.4.5)
-      '@fastify/static':
-        specifier: 'catalog:'
-        version: 9.1.3
       '@fastify/vite':
         specifier: ~9.0.2
         version: 9.0.2(fastify@5.8.5)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       '@libs/repo-utils':
         specifier: workspace:*
         version: link:../../@libs/repo-utils
-      '@mikro-orm/cli':
-        specifier: 'catalog:'
-        version: 7.1.4
-      '@mikro-orm/postgresql':
-        specifier: 7.1.4
-        version: 7.1.4(@mikro-orm/core@7.1.4)
-      '@ngneat/falso':
-        specifier: 'catalog:'
-        version: 8.0.2
       '@swc/core':
         specifier: 'catalog:'
         version: 1.15.43(@swc/helpers@0.5.23)
@@ -601,6 +613,9 @@ importers:
       pdf-parse:
         specifier: 'catalog:'
         version: 2.4.5
+      playwright:
+        specifier: ^1.60.0
+        version: 1.61.1
       ts-node:
         specifier: 'catalog:'
         version: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(@types/node@25.9.4)(typescript@6.0.3)
@@ -610,18 +625,9 @@ importers:
       type-fest:
         specifier: 'catalog:'
         version: 5.8.0
-      vite:
+      vitest:
         specifier: 'catalog:'
-        version: 8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
-      vite-node:
-        specifier: ~6.0.0
-        version: 6.0.0(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
-      vite-plugin-node:
-        specifier: 'catalog:'
-        version: 8.0.0(@swc/core@1.15.43(@swc/helpers@0.5.23))(supports-color@10.2.2)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
-      vite-tsconfig-paths:
-        specifier: 'catalog:'
-        version: 6.1.1(supports-color@10.2.2)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+        version: 4.1.8(@types/node@25.9.4)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.4)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.4)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@apps/e2e':
     devDependencies:
@@ -949,9 +955,6 @@ importers:
       pdfkit:
         specifier: ^0.16.0
         version: 0.16.0
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -1013,6 +1016,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/access-registry-front':
     dependencies:
@@ -1284,9 +1290,6 @@ importers:
       fastify-type-provider-zod:
         specifier: 'catalog:'
         version: 6.1.0(@fastify/swagger@9.7.0)(fastify@5.8.5)(openapi-types@12.1.3)(zod@4.4.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -1327,6 +1330,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/backend-shared':
     dependencies:
@@ -1403,9 +1409,6 @@ importers:
       pdfkit:
         specifier: ^0.15.0
         version: 0.15.2
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -1467,6 +1470,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/incident-registry-front':
     dependencies:
@@ -1732,9 +1738,6 @@ importers:
       fastify-type-provider-zod:
         specifier: 'catalog:'
         version: 6.1.0(@fastify/swagger@9.7.0)(fastify@5.8.5)(openapi-types@12.1.3)(zod@4.4.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -1787,6 +1790,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/permissions-front':
     dependencies:
@@ -2272,9 +2278,6 @@ importers:
       fastify-type-provider-zod:
         specifier: 'catalog:'
         version: 6.1.0(@fastify/swagger@9.7.0)(fastify@5.8.5)(openapi-types@12.1.3)(zod@4.4.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -2336,6 +2339,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@5.9.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/todos-front':
     dependencies:
@@ -2646,18 +2652,12 @@ importers:
       pino-pretty:
         specifier: 'catalog:'
         version: 13.1.3
-      playwright:
-        specifier: ^1.60.0
-        version: 1.60.0
       true-myth:
         specifier: 'catalog:'
         version: 9.4.0
       ts-dotenv:
         specifier: 'catalog:'
         version: 0.9.1
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -2743,6 +2743,9 @@ importers:
       pdf-parse:
         specifier: 'catalog:'
         version: 2.4.5
+      playwright:
+        specifier: ^1.60.0
+        version: 1.60.0
       ts-node:
         specifier: 'catalog:'
         version: 10.9.2(@swc/core@1.15.43(@swc/helpers@0.5.23))(@types/node@25.9.3)(typescript@6.0.3)
@@ -2767,6 +2770,9 @@ importers:
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/browser-playwright@4.1.8)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@26.1.0)(msw@2.14.6(@types/node@25.9.3)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
 
   '@libs/users-front':
     dependencies:
@@ -4476,6 +4482,12 @@ packages:
     peerDependenciesMeta:
       dataloader:
         optional: true
+
+  '@mikro-orm/migrations@7.1.4':
+    resolution: {integrity: sha512-M9rsHpuuaWavoXb0yitgwb+Dy2wzIEzFh5cdJ1NHjPVwyWrTiTTcKmZUiytvHInzLvusuTomRKNRiNUENqnFvQ==}
+    engines: {node: '>= 22.17.0'}
+    peerDependencies:
+      '@mikro-orm/core': 7.1.4
 
   '@mikro-orm/postgresql@7.1.4':
     resolution: {integrity: sha512-oAGi4qb5mbct8ZG6YL9saaIkMTblt82RmBR5pY4qAtWAwQc0OAtvOMYGFzdSImG+7CRHUi618FPtz5k9CIF/VQ==}
@@ -6335,6 +6347,7 @@ packages:
   '@xmldom/xmldom@0.9.10':
     resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
     engines: {node: '>=14.6'}
+    deprecated: this version has critical issues, please update to the latest version
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -7133,6 +7146,7 @@ packages:
 
   charm@1.0.2:
     resolution: {integrity: sha512-wqW3VdPnlSWT4eRiYX+hcs+C6ViBPUWk1qTCd+37qw9kEm/a5n2qcyQDMBWvSYKN/ctqZzeXNQaeBjOetJJUkw==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   cheerio-select@1.6.0:
     resolution: {integrity: sha512-eq0GdBvxVFbqWgmCm7M3XGs1I8oLy/nExUnh6oLqmBditPO9AqQJrkslDpMun/hZ0yyTs8L0m85OHp4ho6Qm9g==}
@@ -14467,6 +14481,11 @@ snapshots:
       - dataloader
 
   '@mikro-orm/core@7.1.4': {}
+
+  '@mikro-orm/migrations@7.1.4(@mikro-orm/core@7.1.4)':
+    dependencies:
+      '@mikro-orm/core': 7.1.4
+      '@mikro-orm/sql': 7.1.4(@mikro-orm/core@7.1.4)
 
   '@mikro-orm/postgresql@7.1.4(@mikro-orm/core@7.1.4)':
     dependencies:
